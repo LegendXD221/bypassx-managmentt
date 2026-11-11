@@ -172,6 +172,261 @@ CREATE TABLE IF NOT EXISTS sticky_messages (
     message_id BIGINT NOT NULL,
     content TEXT NOT NULL
 );
+
+-- ===== v2 expansion tables =====
+
+CREATE TABLE IF NOT EXISTS starboard_config (
+    guild_id BIGINT PRIMARY KEY,
+    channel_id BIGINT NOT NULL,
+    threshold INTEGER DEFAULT 3,
+    emoji TEXT DEFAULT 'star',
+    enabled BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS starred_messages (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    source_message_id BIGINT NOT NULL,
+    source_channel_id BIGINT NOT NULL,
+    starboard_message_id BIGINT,
+    stars INTEGER DEFAULT 0,
+    UNIQUE(guild_id, source_message_id)
+);
+
+CREATE TABLE IF NOT EXISTS giveaways (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL,
+    host_id BIGINT NOT NULL,
+    prize TEXT NOT NULL,
+    winners_count INTEGER DEFAULT 1,
+    ends_at TIMESTAMPTZ NOT NULL,
+    ended BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_giveaways_pending ON giveaways(ends_at) WHERE ended = FALSE;
+
+CREATE TABLE IF NOT EXISTS giveaway_participants (
+    giveaway_id BIGINT REFERENCES giveaways(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL,
+    PRIMARY KEY (giveaway_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS user_xp (
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    xp BIGINT DEFAULT 0,
+    messages BIGINT DEFAULT 0,
+    last_xp TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (guild_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_xp_guild_rank ON user_xp(guild_id, xp DESC);
+
+CREATE TABLE IF NOT EXISTS level_rewards (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    level INTEGER NOT NULL,
+    role_id BIGINT NOT NULL,
+    UNIQUE(guild_id, level)
+);
+
+CREATE TABLE IF NOT EXISTS level_config (
+    guild_id BIGINT PRIMARY KEY,
+    enabled BOOLEAN DEFAULT TRUE,
+    announce_channel_id BIGINT,
+    xp_per_message INTEGER DEFAULT 15,
+    xp_cooldown_seconds INTEGER DEFAULT 60,
+    stack_roles BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id BIGINT,
+    guild_id BIGINT,
+    bio TEXT,
+    title TEXT,
+    color INTEGER DEFAULT 5865F2,
+    badges TEXT[],
+    PRIMARY KEY (user_id, guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS captcha_config (
+    guild_id BIGINT PRIMARY KEY,
+    enabled BOOLEAN DEFAULT FALSE,
+    role_id BIGINT,
+    channel_id BIGINT,
+    log_channel_id BIGINT,
+    difficulty TEXT DEFAULT 'medium',
+    kick_unverified_minutes INTEGER DEFAULT 0,
+    verified_role_id BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS captcha_pending (
+    user_id BIGINT,
+    guild_id BIGINT,
+    answer TEXT NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS auto_responses (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    trigger TEXT NOT NULL,
+    response TEXT NOT NULL,
+    match_type TEXT DEFAULT 'contains',
+    created_by BIGINT,
+    uses INTEGER DEFAULT 0,
+    UNIQUE(guild_id, trigger)
+);
+
+CREATE TABLE IF NOT EXISTS server_stats (
+    guild_id BIGINT PRIMARY KEY,
+    members_channel_id BIGINT,
+    humans_channel_id BIGINT,
+    bots_channel_id BIGINT,
+    channels_count_id BIGINT,
+    roles_count_id BIGINT,
+    boost_count_id BIGINT,
+    online_count_id BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS temp_voice_config (
+    guild_id BIGINT PRIMARY KEY,
+    category_id BIGINT,
+    creator_channel_id BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS temp_voice_sessions (
+    channel_id BIGINT PRIMARY KEY,
+    owner_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS quotes (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    quoter_id BIGINT NOT NULL,
+    author_id BIGINT,
+    author_name TEXT,
+    content TEXT NOT NULL,
+    channel_id BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS role_persistence (
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    role_ids BIGINT[],
+    saved_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (guild_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS birthdays (
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    month INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    announced_year INTEGER,
+    PRIMARY KEY (guild_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS custom_commands (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    embed_color INTEGER DEFAULT 5865F2,
+    created_by BIGINT,
+    uses INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(guild_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS saved_embeds (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    name TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    color INTEGER DEFAULT 5865F2,
+    footer TEXT,
+    image_url TEXT,
+    thumbnail_url TEXT,
+    author_name TEXT,
+    created_by BIGINT,
+    UNIQUE(guild_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS guild_lockdown_state (
+    guild_id BIGINT PRIMARY KEY,
+    locked BOOLEAN DEFAULT FALSE,
+    locked_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS reaction_polls (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL,
+    question TEXT,
+    options JSONB,
+    ends_at TIMESTAMPTZ,
+    ended BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS anti_nuke_whitelist (
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    added_by BIGINT NOT NULL,
+    PRIMARY KEY (guild_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS guild_join_leave_log (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    event TEXT NOT NULL,
+    user_id BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS nickname_history (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    old_nick TEXT,
+    new_nick TEXT,
+    changed_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_nickhistory_user ON nickname_history(guild_id, user_id, changed_at DESC);
+
+CREATE TABLE IF NOT EXISTS scheduled_announcements (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    content TEXT,
+    cron_expr TEXT,
+    next_run TIMESTAMPTZ,
+    last_run TIMESTAMPTZ,
+    active BOOLEAN DEFAULT TRUE,
+    created_by BIGINT
+);
+"""
+
+# tables that already existed in v1 but might need additional columns;
+# these ALTERs are idempotent (DO NOTHING if column exists).
+SCHEMA_ALTERS = """
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS anti_nuke_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_channel_id BIGINT;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_threshold INTEGER DEFAULT 3;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS levels_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS levels_announce_channel_id BIGINT;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS captcha_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS sticky_role_id BIGINT;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS role_persistence_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS birthday_channel_id BIGINT;
+ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS birthday_role_id BIGINT;
 """
 
 
@@ -210,7 +465,8 @@ class Database:
         assert self.pool is not None
         async with self.pool.acquire() as conn:
             await conn.execute(SCHEMA)
-        log.info("Database schema verified.")
+            await conn.execute(SCHEMA_ALTERS)
+        log.info("Database schema verified (v2 expansion applied).")
 
     async def close(self) -> None:
         if self.pool is not None:

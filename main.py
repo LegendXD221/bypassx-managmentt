@@ -59,6 +59,7 @@ class BypassXBot(commands.Bot):
         self.launch_time = _t.monotonic()
 
         cog_names = [
+            # v1 core
             "cogs.admin",
             "cogs.moderation",
             "cogs.automod",
@@ -72,6 +73,26 @@ class BypassXBot(commands.Bot):
             "cogs.tags",
             "cogs.afk",
             "cogs.security",
+            # v2 expansion
+            "cogs.sticky",
+            "cogs.starboard",
+            "cogs.giveaways",
+            "cogs.levels",
+            "cogs.profiles",
+            "cogs.captcha",
+            "cogs.autoresponder",
+            "cogs.serverstats",
+            "cogs.tempchannels",
+            "cogs.snipe",
+            "cogs.embed_builder",
+            "cogs.fun",
+            "cogs.role_persistence",
+            "cogs.owner",
+            "cogs.mass_actions",
+            "cogs.birthdays",
+            "cogs.lockdown_all",
+            "cogs.quotes",
+            # help last so it sees all commands
             "cogs.help_cog",
         ]
         loaded = 0

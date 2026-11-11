@@ -1,4 +1,11 @@
-"""Shared helpers used across all cogs: embeds, permission checks, formatting."""
+"""Shared helpers used across all cogs.
+
+Premium, minimal, aesthetic design system:
+  • Refined palette (deep indigo primary, gold accent, soft success/danger)
+  • Consistent footer on every embed
+  • Tasteful glyphs (no emoji soup)
+  • Clean inline fields
+"""
 from __future__ import annotations
 
 import datetime as dt
@@ -8,28 +15,70 @@ from typing import Any, Iterable
 import discord
 from discord import app_commands
 
-ACCENT = 0x5865F2      # Discord blurple
-SUCCESS = 0x57F287     # green
-WARN = 0xFEE75C       # yellow
-DANGER = 0xED4245      # red
-INFO = 0x5865F2       # blurple
+# ---------- Premium palette --------------------------------------------------
+ACCENT   = 0x6366F1   # indigo-500 — primary
+GOLD     = 0xF5B544   # muted gold — premium accent
+SUCCESS  = 0x10B981   # emerald
+WARN     = 0xF59E0B   # amber
+DANGER   = 0xE11D48   # rose
+INFO     = 0x6366F1   # indigo
+NEUTRAL  = 0x94A3B8   # slate
+INK      = 0x0B0F19   # near-black for embed sidebars (Discord auto-dims)
+
+FOOTER_TEXT = "BypassX Management"
+FOOTER_ICON = ""  # optional: set to a CDN URL for a branded mark
+
+# ---------- Embed factory ----------------------------------------------------
+
+def _stamp() -> dt.datetime:
+    return dt.datetime.now(dt.UTC)
+
+
+def _apply_footer(embed: discord.Embed) -> discord.Embed:
+    embed.set_footer(text=FOOTER_TEXT, icon_url=FOOTER_ICON or None)
+    return embed
 
 
 def embed_success(title: str, description: str = "") -> discord.Embed:
-    return discord.Embed(title=title, description=description, color=SUCCESS, timestamp=dt.datetime.now(dt.UTC))
+    e = discord.Embed(title=title, description=description, color=SUCCESS, timestamp=_stamp())
+    return _apply_footer(e)
 
 
 def embed_info(title: str, description: str = "") -> discord.Embed:
-    return discord.Embed(title=title, description=description, color=INFO, timestamp=dt.datetime.now(dt.UTC))
+    e = discord.Embed(title=title, description=description, color=INFO, timestamp=_stamp())
+    return _apply_footer(e)
 
 
 def embed_warn(title: str, description: str = "") -> discord.Embed:
-    return discord.Embed(title=title, description=description, color=WARN, timestamp=dt.datetime.now(dt.UTC))
+    e = discord.Embed(title=title, description=description, color=WARN, timestamp=_stamp())
+    return _apply_footer(e)
 
 
 def embed_error(title: str, description: str = "") -> discord.Embed:
-    return discord.Embed(title=title, description=description, color=DANGER, timestamp=dt.datetime.now(dt.UTC))
+    e = discord.Embed(title=title, description=description, color=DANGER, timestamp=_stamp())
+    return _apply_footer(e)
 
+
+def embed_premium(title: str, description: str = "") -> discord.Embed:
+    """Premium-styled embed — indigo with gold accent in the footer."""
+    e = discord.Embed(title=title, description=description, color=ACCENT, timestamp=_stamp())
+    e.set_footer(text=f"{FOOTER_TEXT}  •  Premium", icon_url=FOOTER_ICON or None)
+    return e
+
+
+def embed_field(embed: discord.Embed, name: str, value: Any, inline: bool = True) -> discord.Embed:
+    """Add a clean field; blank values are replaced with an em dash."""
+    embed.add_field(name=name, value=(str(value) if value not in (None, "") else "—"), inline=inline)
+    return embed
+
+
+def divider(embed: discord.Embed) -> discord.Embed:
+    """Add an invisible divider field to break up content."""
+    embed.add_field(name="\u200b", value="\u200b", inline=False)
+    return embed
+
+
+# ---------- Time helpers -----------------------------------------------------
 
 def human_timedelta(seconds: float) -> str:
     """Return a short human readable duration like '2h 5m'."""
@@ -69,7 +118,6 @@ def parse_duration(text: str) -> int | None:
         else:
             return None
     if not matched_any:
-        # plain seconds if all digits
         if text.isdigit():
             return int(text)
         return None
@@ -77,6 +125,16 @@ def parse_duration(text: str) -> int | None:
         return None
     return total if total > 0 else None
 
+
+def format_number(n: int | float) -> str:
+    """Format a number with thousands separators."""
+    try:
+        return f"{int(n):,}"
+    except (TypeError, ValueError):
+        return str(n)
+
+
+# ---------- Modlog -----------------------------------------------------------
 
 async def send_modlog(
     guild: discord.Guild,
@@ -88,10 +146,7 @@ async def send_modlog(
     details: dict[str, Any] | None = None,
     color: int = ACCENT,
 ) -> None:
-    """Send a formatted moderation log embed to the guild's mod-log channel.
-
-    Safe to call even if no mod-log channel is configured; it will silently skip.
-    """
+    """Send a formatted moderation log embed to the guild's mod-log channel."""
     from database import get_db
 
     try:
@@ -107,11 +162,12 @@ async def send_modlog(
     if channel is None or not isinstance(channel, discord.TextChannel):
         return
 
-    embed = discord.Embed(title=f"Moderation • {action.title()}", color=color, timestamp=dt.datetime.now(dt.UTC))
+    embed = discord.Embed(title=f"Moderation · {action.title()}", color=color, timestamp=_stamp())
+    embed.set_footer(text=f"{FOOTER_TEXT} · mod-log")
     if target:
-        embed.add_field(name="Target", value=f"{target.mention}\n{target} (`{target.id}`)", inline=False)
+        embed.add_field(name="Target", value=f"{target.mention}\n{target} · `{target.id}`", inline=False)
     if moderator:
-        embed.add_field(name="Moderator", value=f"{moderator.mention}\n{moderator}", inline=True)
+        embed.add_field(name="Moderator", value=f"{moderator.mention}", inline=True)
     if reason:
         embed.add_field(name="Reason", value=reason, inline=True)
     if details:
@@ -123,12 +179,9 @@ async def send_modlog(
         pass
 
 
-def is_mod() -> app_commands.Command:
-    """Decorator factory — usage: @is_mod() on a slash command.
+# ---------- Permission checks ------------------------------------------------
 
-    Checks that the invoker has manage_messages, kick_members, ban_members, or
-    is the guild owner. Add as the first check.
-    """
+def is_mod():
     async def predicate(interaction: discord.Interaction) -> bool:
         if interaction.guild is None:
             raise app_commands.NoPrivateMessage("This command can only be used in a server.")
@@ -155,6 +208,16 @@ def is_admin():
     return app_commands.check(predicate)
 
 
+def is_owner():
+    """Use on app_commands that only the bot owner may run."""
+    from config import config
+    async def predicate(interaction: discord.Interaction) -> bool:
+        return interaction.user.id == config.owner_id
+    return app_commands.check(predicate)
+
+
+# ---------- Misc helpers -----------------------------------------------------
+
 def chunk(seq: Iterable[Any], size: int) -> list[list[Any]]:
     out: list[list[Any]] = []
     cur: list[Any] = []
@@ -178,3 +241,21 @@ def start_timer() -> float:
 
 def elapsed_since(t0: float) -> float:
     return time.monotonic() - t0
+
+
+# ---------- Premium UI strings ----------------------------------------------
+
+GLYPHS = {
+    "success": "✓",
+    "error":   "✕",
+    "warn":    "!",
+    "info":    "i",
+    "star":    "★",
+    "diamond": "◆",
+    "arrow":   "→",
+    "bullet":  "•",
+    "dot":     "·",
+    "shield":  "🛡",
+    "crown":   "♔",
+    "spark":   "✦",
+}

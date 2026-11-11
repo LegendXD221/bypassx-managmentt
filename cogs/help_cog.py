@@ -1,25 +1,44 @@
-"""Help command — comprehensive interactive help menu."""
+"""Help command — comprehensive interactive help menu with premium look."""
 from __future__ import annotations
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
+from utils import ACCENT, GOLD, embed_premium
+
 HELP_MODULES = [
-    ("🛡️ Moderation", "ban, unban, kick, timeout, untimeout, mute, unmute, warn, warnings, clearwarnings, purge, slowmode, lockdown, unlock, softban, nickname", "Moderation"),
-    ("🤖 AutoMod", "automod toggle / status / addword / removeword / listwords / mentionthreshold / antiraidconfig", "AutoMod"),
-    ("👋 Welcome", "welcome setchannel / message / leavemessage / test / autorole / placeholders", "Welcome"),
-    ("🎫 Tickets", "ticket panel / close / add / remove / setstaffrole / setcategory", "Tickets"),
-    ("🎭 Roles", "roles buttonpanel / reactionrole / selfrole", "Roles"),
-    ("✅ Verification", "verify setup / status / disable", "Verification"),
-    ("📝 Logging", "logging setchannel / setmodlog / disable", "Logging"),
-    ("🔐 Security", "security scan / audit / permscheck", "Security"),
-    ("⏰ Reminders", "remind / reminders / cancelreminder", "Reminders"),
-    ("🏷️ Tags", "tag / tagcreate / tagdelete / taglist", "Tags"),
-    ("💤 AFK", "afk", "AFK"),
-    ("🛠️ Utility", "ping / uptime / serverinfo / userinfo / avatar / roleinfo / poll / membercount / servericon / firstmessage / botinfo", "Utility"),
-    ("⚙️ Config", "config set / view / reset", "Admin"),
-    ("👑 Owner", "reload / sync / shutdown", "Admin"),
+    ("🛡  Moderation",       "ban, unban, kick, softban, timeout, mute, warn, warnings, purge, slowmode, lockdown, unlock, nickname", "Moderation"),
+    ("🤖  AutoMod",           "automod toggle / status / addword / removeword / listwords / mentionthreshold / antiraidconfig", "AutoMod"),
+    ("👋  Welcome",           "welcome setchannel / message / leavemessage / test / autorole / placeholders", "Welcome"),
+    ("🎫  Tickets",           "ticket panel / close / add / remove / setstaffrole / setcategory", "Tickets"),
+    ("🎭  Roles",             "roles buttonpanel / reactionrole / selfrole", "Roles"),
+    ("✅  Verification",      "verify setup / status / disable", "Verification"),
+    ("📝  Logging",           "logging setchannel / setmodlog / disable", "Logging"),
+    ("🔐  Security",          "security scan / audit / permscheck", "Security"),
+    ("⏰  Reminders",         "remind / reminders / cancelreminder", "Reminders"),
+    ("🏷  Tags",              "tag / tagcreate / tagdelete / taglist", "Tags"),
+    ("💤  AFK",               "afk", "AFK"),
+    ("📌  Sticky",            "sticky create / remove / list", "StickyMessages"),
+    ("⭐  Starboard",         "starboard setup / disable / status", "Starboard"),
+    ("🎉  Giveaways",         "giveaway start / end / reroll / list", "Giveaways"),
+    ("✦  Levels",             "rank view / leaderboard · levels toggle / channel / reward / rewards / reset", "Levels"),
+    ("👤  Profiles",          "profile view / bio / title / color / clear", "Profiles"),
+    ("🔐  Captcha",           "captcha setup / disable · verify-captcha answer", "Captcha"),
+    ("💬  Auto Responder",    "autoresponder add / remove / list", "AutoResponder"),
+    ("📊  Server Stats",      "serverstats setup / disable", "ServerStats"),
+    ("🔊  Temp Voice",        "tempvoice setup / status", "TempVoice"),
+    ("🎯  Snipe",             "snipe / editsnipe / clearsnipe", "Snipe"),
+    ("🎨  Embeds",            "embed send / save / post / list / delete", "EmbedBuilder"),
+    ("🎲  Fun",               "8ball / dice / coinflip / choose / rps / wouldyourather / random / meme", "Fun"),
+    ("💾  Role Persistence",   "rolepersistence toggle / status / clear", "RolePersistence"),
+    ("🎂  Birthdays",         "birthday set / view / upcoming / remove · birthdays channel / role", "Birthdays"),
+    ("🔒  Lockdown",          "lockdownall / unlockall / lockdownstatus", "LockdownAll"),
+    ("❝  Quotes",            "quote add / random / view / list / delete", "Quotes"),
+    ("⚖  Mass Actions",      "mass roleadd / roleremove / ban / kick / nickname", "MassActions"),
+    ("🛠  Utility",           "ping / uptime / serverinfo / userinfo / avatar / roleinfo / poll / membercount / servericon / firstmessage / botinfo", "Utility"),
+    ("⚙  Config",             "config set / view / reset", "Admin"),
+    ("👑  Owner",             "eval / sql / listguilds / leaveguild / botstats / broadcast / maintenance / reloadall", "Owner"),
 ]
 
 
@@ -27,12 +46,11 @@ class HelpView(discord.ui.View):
     def __init__(self, bot: commands.Bot):
         super().__init__(timeout=180)
         self.bot = bot
-        # add one select option per module
         options = [
-            discord.SelectOption(label=name.split(" ", 1)[1] if " " in name else name, emoji=name.split(" ")[0], description=desc[:100], value=name)
+            discord.SelectOption(label=(name.split("  ", 1)[1] if "  " in name else name), description=desc[:100], value=name)
             for name, desc, _ in HELP_MODULES
         ]
-        sel = discord.ui.Select(placeholder="Browse command categories...", options=options, min_values=1, max_values=1)
+        sel = discord.ui.Select(placeholder="Browse command categories…", options=options, min_values=1, max_values=1)
         sel.callback = self.on_select
         self.add_item(sel)
 
@@ -42,18 +60,17 @@ class HelpView(discord.ui.View):
         if not matching:
             return
         name, desc, cog_name = matching[0]
-        embed = discord.Embed(title=f"{name} — Commands", description=f"Here are the commands in this module:\n\n`{desc}`", color=0x5865F2)
-        # list actual commands in this cog
+        embed = discord.Embed(title=name, description=f"Commands in this module:\n\n`{desc}`", color=ACCENT, timestamp=discord.utils.utcnow())
+        embed.set_footer(text="BypassX  •  Premium")
         cog = self.bot.get_cog(cog_name)
         if cog:
-            cmds = [c for c in cog.walk_app_commands() if isinstance(c, app_commands.Command)]
+            cmds = sorted([c for c in cog.walk_app_commands() if isinstance(c, app_commands.Command)], key=lambda c: c.qualified_name)
             if cmds:
                 lines = []
                 for c in cmds[:25]:
                     desc_text = c.description or "—"
                     lines.append(f"• `/{c.qualified_name}` — {desc_text}")
                 embed.add_field(name="Commands", value="\n".join(lines), inline=False)
-        embed.set_footer(text="BypassX Management • /help")
         await interaction.response.edit_message(embed=embed, view=self)
 
 
@@ -65,10 +82,19 @@ class Help(commands.Cog):
 
     @app_commands.command(name="help", description="Show the BypassX command menu.")
     async def help(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="BypassX Management", description="The all-in-one Discord management bot.\n\nUse the dropdown below to browse commands by category, or scroll through the modules.", color=0x5865F2)
-        for name, desc, _ in HELP_MODULES:
+        embed = discord.Embed(
+            title="BypassX Management",
+            description=(
+                "The all-in-one Discord management bot.\n"
+                "Pick a category from the dropdown to browse commands, or scroll through the modules below."
+            ),
+            color=ACCENT,
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.set_footer(text="BypassX  •  Premium")
+        # split modules into compact groups to fit Discord's 25-field limit
+        for name, desc, _ in HELP_MODULES[:25]:
             embed.add_field(name=name, value=f"`{desc}`", inline=False)
-        embed.set_footer(text="BypassX Management • Made for power users")
         await interaction.response.send_message(embed=embed, view=HelpView(self.bot))
 
 
