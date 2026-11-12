@@ -412,6 +412,95 @@ CREATE TABLE IF NOT EXISTS scheduled_announcements (
     active BOOLEAN DEFAULT TRUE,
     created_by BIGINT
 );
+
+-- ===== v3 expansion tables =====
+
+CREATE TABLE IF NOT EXISTS ticket_categories (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    panel_id BIGINT NOT NULL,
+    label TEXT NOT NULL,
+    description TEXT,
+    emoji TEXT,
+    category_id BIGINT,
+    staff_role_id BIGINT,
+    button_style TEXT DEFAULT 'secondary'
+);
+
+CREATE TABLE IF NOT EXISTS ticket_panels_v3 (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL,
+    title TEXT,
+    description TEXT,
+    color INTEGER DEFAULT 5865F2,
+    selection_type TEXT DEFAULT 'dropdown'
+);
+
+CREATE TABLE IF NOT EXISTS dropdown_role_panels (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL,
+    title TEXT,
+    description TEXT,
+    placeholder TEXT,
+    min_values INTEGER DEFAULT 0,
+    max_values INTEGER DEFAULT 25
+);
+
+CREATE TABLE IF NOT EXISTS dropdown_role_options (
+    id SERIAL PRIMARY KEY,
+    panel_id BIGINT REFERENCES dropdown_role_panels(id) ON DELETE CASCADE,
+    role_id BIGINT NOT NULL,
+    label TEXT NOT NULL,
+    description TEXT,
+    emoji TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_reputation (
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    reputation INTEGER DEFAULT 0,
+    last_thanked TIMESTAMPTZ,
+    PRIMARY KEY (guild_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS color_role_assignments (
+    guild_id BIGINT PRIMARY KEY,
+    template_role_id BIGINT NOT NULL,
+    category_id BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS user_color_roles (
+    user_id BIGINT,
+    guild_id BIGINT,
+    role_id BIGINT NOT NULL,
+    color INTEGER NOT NULL,
+    PRIMARY KEY (user_id, guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS mod_notes (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    moderator_id BIGINT NOT NULL,
+    note TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_modnotes_user ON mod_notes(guild_id, user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS member_history (
+    id SERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    action TEXT NOT NULL,
+    moderator_id BIGINT,
+    reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_member_history ON member_history(guild_id, user_id, created_at DESC);
 """
 
 # tables that already existed in v1 but might need additional columns;
@@ -466,7 +555,7 @@ class Database:
         async with self.pool.acquire() as conn:
             await conn.execute(SCHEMA)
             await conn.execute(SCHEMA_ALTERS)
-        log.info("Database schema verified (v2 expansion applied).")
+        log.info("Database schema verified (v3 expansion applied).")
 
     async def close(self) -> None:
         if self.pool is not None:
