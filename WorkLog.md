@@ -70,6 +70,68 @@ This file is the canonical development log for the BypassX Management Discord bo
 | 3 | 2026-11-12 ~16:10Z | `814fe7a` | feat: v2 — massive expansion (17 new cogs, 22 new tables, premium theme) | v2 expansion. +17 cogs, +22 tables, premium visual theme. All compile OK. |
 | 4 | 2026-11-12 ~16:35Z | `5090429` | docs: WorkLog sync — v2 expansion entry + updated future work | WorkLog sync for v2. |
 | 5 | 2026-11-12 ~17:05Z | `578b4fd` | feat: v3 — Components v2, premium panels, +12 new cogs, ~130+ commands | v3 expansion. +12 cogs, +9 tables, premium dropdown menus & ticket v3. All compile OK. |
+| 6 | 2026-11-12 ~17:30Z | `b6a45f2` | docs: WorkLog sync — v3 entry + updated future work checklist | WorkLog sync for v3. |
+| 7 | 2026-11-12 ~21:30Z | `8c46cdc` | feat: v4 — Render free-tier deployment with 24/7 keep-alive | Added keepalive.py (aiohttp HTTP server), render.yaml Blueprint, .python-version. Sanitized README (removed repo & invite URLs). |
+| 8 | 2026-11-12 ~21:35Z | `94d9057` | fix: replace hex integer literals in SQL schema with decimal | Fixed PostgreSQL DEFAULT clauses (5865F2 → 5793266) that caused Render deploy to fail. |
+| 9 | 2026-11-12 ~21:50Z | `847586f` | fix: consolidate cogs to fit Discord's 100-command limit | Folded 7 standalone cogs into existing cogs as subcommand groups. Cog count 43 → 36. |
+| 10 | 2026-11-12 ~21:55Z | `2a34a32` | fix: trim utility_extra to 3 commands to fit Discord's 100-command limit | Removed 8 redundant commands. All 36/36 cogs now load; 100 commands synced. |
+
+---
+
+## Work Entries
+
+### 2026-11-12 — v4 Render Deployment + Command Consolidation
+
+**Author:** Z.ai (automated build)
+**Commits:** `8c46cdc`, `94d9057`, `847586f`, `2a34a32`
+**Theme directive:** minimal, aesthetic, premium; deployed on Render free tier with 24/7 keep-alive
+
+**What was done:**
+
+- **Render free-tier deployment (24/7):**
+  - Created `keepalive.py` — aiohttp HTTP server that binds to `$PORT` (provided by Render) and exposes `/health`, `/ping`, `/` endpoints. Includes a 5-minute self-ping loop to prevent Render's 15-min spin-down.
+  - Updated `main.py` to start the keep-alive server after the bot is ready, with graceful cleanup on shutdown.
+  - Added `render.yaml` Blueprint for one-click deploys (Python 3.12.6, free plan, health check on `/health`).
+  - Added `.python-version` pinning 3.12.6.
+  - Added `aiohttp>=3.9.0` to requirements.txt.
+  - Created the Render web service via API with all env vars (BOT_TOKEN, DATABASE_URL, OWNER_ID, etc.).
+  - Service URL: `https://bypassx-management.onrender.com`
+  - Auto-deploy enabled on every push to `main`.
+
+- **Database fix:**
+  - Updated `database.py` to strip Neon's `channel_binding=require` parameter from the DSN (asyncpg doesn't natively parse it; the server enforces it anyway via SSL).
+  - Fixed a critical bug: 4 SQL `DEFAULT` clauses used hex literals (`5865F2`) which PostgreSQL rejects. Replaced with decimal equivalent `5793266`.
+
+- **Command consolidation (Discord's 100-command limit):**
+  - Discord enforces a hard limit of 100 global slash commands per bot. The v3 expansion pushed the total to ~240 declared commands.
+  - Folded 7 standalone cogs into existing cogs as subcommand groups:
+    - `moderation_extra` → `moderation` (added `/note add/view/clear`, `/history`, `/memberinfo`)
+    - `scheduled_announcements` → `admin` (added `/schedule add/list/remove/pause/resume`)
+    - `anti_nuke_whitelist` → `security` (added `/security whitelist/unwhitelist/whitelistlist`)
+    - `reputation` → `levels` (added `/rep view/leaderboard/give`)
+    - `color_roles` → `roles` (added `/color set/clear`)
+    - `text_tools` → `fun` (added `/text mock/reverse/encode/decode/length/vaporwave/password/sha256`)
+    - `reaction_polls` → `utility` (added `/rpoll create`)
+  - Trimmed `utility_extra` from 11 commands to 3 (kept `timeconvert`, `hex`, `inviteinfo`).
+  - Final state: **36/36 cogs loaded, 100 commands synced, bot online**.
+
+- **Sanitization:**
+  - Removed all repo URLs and bot invite URLs from README.md (per user directive).
+  - Verified no cog surfaces these URLs in bot replies.
+
+**Files changed:** keepalive.py (new), render.yaml (new), .python-version (new), main.py, database.py, requirements.txt, README.md, cogs/moderation.py, cogs/admin.py, cogs/security.py, cogs/levels.py, cogs/roles.py, cogs/utility.py, cogs/fun.py, cogs/utility_extra.py. Deleted: cogs/moderation_extra.py, cogs/scheduled_announcements.py, cogs/reaction_polls.py, cogs/anti_nuke_whitelist.py, cogs/reputation.py, cogs/color_roles.py, cogs/text_tools.py.
+
+---
+
+## Post-Push Notes (2026-11-12 v4)
+
+- **Bot is live on Render free tier** at `https://bypassx-management.onrender.com`.
+- **36/36 cogs loaded**, **100 application commands synced** (exactly at Discord's limit).
+- Keep-alive HTTP server responding on `/health` (200 OK), self-pinging every 5 min.
+- Render health checker pings `/health` every ~5 seconds.
+- Auto-deploy enabled — every push to `main` triggers a new deploy.
+- For true 24/7 on free tier, an external uptime pinger (UptimeRobot, cron-job.org) hitting `/health` every 5-10 min is recommended.
+- No repo URL or bot invite URL in any bot reply or user-facing documentation.
 
 ---
 
