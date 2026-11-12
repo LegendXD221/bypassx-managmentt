@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     guild_id BIGINT,
     bio TEXT,
     title TEXT,
-    color INTEGER DEFAULT 5865F2,
+    color INTEGER DEFAULT 5793266,
     badges TEXT[],
     PRIMARY KEY (user_id, guild_id)
 );
@@ -337,7 +337,7 @@ CREATE TABLE IF NOT EXISTS custom_commands (
     guild_id BIGINT NOT NULL,
     name TEXT NOT NULL,
     content TEXT NOT NULL,
-    embed_color INTEGER DEFAULT 5865F2,
+    embed_color INTEGER DEFAULT 5793266,
     created_by BIGINT,
     uses INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS saved_embeds (
     name TEXT NOT NULL,
     title TEXT,
     description TEXT,
-    color INTEGER DEFAULT 5865F2,
+    color INTEGER DEFAULT 5793266,
     footer TEXT,
     image_url TEXT,
     thumbnail_url TEXT,
@@ -434,7 +434,7 @@ CREATE TABLE IF NOT EXISTS ticket_panels_v3 (
     message_id BIGINT NOT NULL,
     title TEXT,
     description TEXT,
-    color INTEGER DEFAULT 5865F2,
+    color INTEGER DEFAULT 5793266,
     selection_type TEXT DEFAULT 'dropdown'
 );
 
