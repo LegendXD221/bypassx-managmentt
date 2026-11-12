@@ -387,6 +387,74 @@ class Moderation(commands.Cog):
             return
         await interaction.response.send_message(embed=embed_success("Nickname Updated", f"New nickname for {member.mention}: **{nickname or '(reset)'}**"))
 
+    # ---------------- mod notes (folded from moderation_extra) -------------
+
+    note = app_commands.Group(name="note", description="Private moderator notes on members.", default_permissions=discord.Permissions(manage_messages=True))
+
+    @note.command(name="add", description="Add a private mod note about a member.")
+    @is_mod()
+    async def note_add(self, interaction: discord.Interaction, member: discord.Member, note: str):
+        await get_db().execute(
+            "INSERT INTO mod_notes (guild_id, user_id, moderator_id, note) VALUES ($1,$2,$3,$4)",
+            interaction.guild.id, member.id, interaction.user.id, note,
+        )
+        await interaction.response.send_message(embed=embed_success("Note Added", f"Private note saved for {member.mention}."), ephemeral=True)
+
+    @note.command(name="view", description="View private mod notes for a member.")
+    @is_mod()
+    async def note_view(self, interaction: discord.Interaction, member: discord.Member):
+        rows = await get_db().fetch(
+            "SELECT note, moderator_id, created_at FROM mod_notes WHERE guild_id=$1 AND user_id=$2 ORDER BY created_at DESC LIMIT 15",
+            interaction.guild.id, member.id,
+        )
+        if not rows:
+            await interaction.response.send_message(embed=embed_info("No Notes", f"No private notes for {member.mention}."), ephemeral=True)
+            return
+        embed = embed_premium(f"Mod Notes — {member}", f"**{len(rows)}** note(s):")
+        for r in rows[:15]:
+            mod = self.bot.get_user(int(r["moderator_id"])) or await self.bot.fetch_user(int(r["moderator_id"]))
+            embed.add_field(name=f"<t:{int(r['created_at'].timestamp())}:R>", value=f"{r['note']}\n— {mod.mention if mod else r['moderator_id']}", inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @note.command(name="clear", description="Clear all mod notes for a member.")
+    @is_mod()
+    async def note_clear(self, interaction: discord.Interaction, member: discord.Member):
+        await get_db().execute("DELETE FROM mod_notes WHERE guild_id=$1 AND user_id=$2", interaction.guild.id, member.id)
+        await interaction.response.send_message(embed=embed_success("Notes Cleared", f"All notes for {member.mention} removed."), ephemeral=True)
+
+    @app_commands.command(name="history", description="Show a member's full moderation history.")
+    @is_mod()
+    @app_commands.default_permissions(manage_messages=True)
+    async def history(self, interaction: discord.Interaction, member: discord.Member):
+        warnings = await get_db().fetch("SELECT reason, created_at FROM warnings WHERE guild_id=$1 AND user_id=$2 ORDER BY created_at DESC LIMIT 10", interaction.guild.id, member.id)
+        mutes = await get_db().fetch("SELECT reason, created_at FROM mutes WHERE guild_id=$1 AND user_id=$2 ORDER BY created_at DESC LIMIT 10", interaction.guild.id, member.id)
+        notes_count = await get_db().fetchval("SELECT COUNT(*) FROM mod_notes WHERE guild_id=$1 AND user_id=$2", interaction.guild.id, member.id)
+        embed = embed_premium(f"History — {member}", f"Warnings: **{len(warnings)}** · Mutes: **{len(mutes)}** · Notes: **{notes_count}**")
+        if warnings:
+            embed.add_field(name="⚠ Recent Warnings", value="\n".join(f"• {r['reason']} — <t:{int(r['created_at'].timestamp())}:R>" for r in warnings[:5]), inline=False)
+        if mutes:
+            embed.add_field(name="🔇 Recent Mutes", value="\n".join(f"• {r['reason'] or 'No reason'} — <t:{int(r['created_at'].timestamp())}:R>" for r in mutes[:5]), inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="memberinfo", description="Show detailed mod-facing info about a member.")
+    @is_mod()
+    @app_commands.default_permissions(manage_messages=True)
+    async def memberinfo(self, interaction: discord.Interaction, member: discord.Member):
+        warnings = await get_db().fetchval("SELECT COUNT(*) FROM warnings WHERE guild_id=$1 AND user_id=$2", interaction.guild.id, member.id)
+        notes = await get_db().fetchval("SELECT COUNT(*) FROM mod_notes WHERE guild_id=$1 AND user_id=$2", interaction.guild.id, member.id)
+        embed = embed_premium(f"Member Info — {member}")
+        if member.display_avatar:
+            embed.set_thumbnail(url=member.display_avatar.url)
+        embed.add_field(name="ID", value=f"`{member.id}`", inline=True)
+        embed.add_field(name="Joined", value=f"<t:{int(member.joined_at.timestamp())}:R>" if member.joined_at else "—", inline=True)
+        embed.add_field(name="Account Created", value=f"<t:{int(member.created_at.timestamp())}:R>", inline=True)
+        embed.add_field(name="Top Role", value=member.top_role.mention, inline=True)
+        embed.add_field(name="Roles", value=str(len(member.roles) - 1), inline=True)
+        embed.add_field(name="Warnings", value=str(warnings), inline=True)
+        embed.add_field(name="Mod Notes", value=str(notes), inline=True)
+        embed.add_field(name="Timeout", value=f"<t:{int(member.timed_out_until.timestamp())}:R>" if member.timed_out_until else "None", inline=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 # ---------------- mute expiry processor (called from background task) --------
 

@@ -92,18 +92,11 @@ class BypassXBot(commands.Bot):
             "cogs.birthdays",
             "cogs.lockdown_all",
             "cogs.quotes",
-            # v3 expansion — components v2, premium panels, more AIO commands
+            # v3 expansion (consolidated in v4 to fit Discord's 100-command limit)
             "cogs.dropdown_roles",
             "cogs.premium_panels",
             "cogs.utility_extra",
             "cogs.vc_tools",
-            "cogs.moderation_extra",
-            "cogs.scheduled_announcements",
-            "cogs.reaction_polls",
-            "cogs.anti_nuke_whitelist",
-            "cogs.reputation",
-            "cogs.color_roles",
-            "cogs.text_tools",
             # help last so it sees all commands
             "cogs.help_cog",
         ]

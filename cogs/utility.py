@@ -180,6 +180,41 @@ class Utility(commands.Cog):
         embed.set_footer(text="BypassX Management • Free Tier")
         await interaction.response.send_message(embed=embed)
 
+    # ---------- reaction polls (folded in v4) ----------
+
+    rpoll = app_commands.Group(name="rpoll", description="Reaction polls.", default_permissions=None)
+
+    @rpoll.command(name="create", description="Create a reaction poll with up to 9 options.")
+    async def rpoll_create(
+        self,
+        interaction: discord.Interaction,
+        question: str,
+        option1: str,
+        option2: str,
+        option3: str = "",
+        option4: str = "",
+        option5: str = "",
+        option6: str = "",
+        option7: str = "",
+        option8: str = "",
+        option9: str = "",
+    ):
+        POLL_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
+        options = [o for o in [option1, option2, option3, option4, option5, option6, option7, option8, option9] if o]
+        if len(options) < 2:
+            await interaction.response.send_message(embed=embed_error("Need at least 2 options."), ephemeral=True)
+            return
+        body = "\n".join(f"{POLL_EMOJIS[i]} {opt}" for i, opt in enumerate(options))
+        embed = discord.Embed(title=f"📊 {question}", description=body, color=ACCENT, timestamp=dt.datetime.now(dt.UTC))
+        embed.set_footer(text="BypassX  •  Reaction Poll")
+        await interaction.response.send_message(embed=embed)
+        msg = await interaction.original_response()
+        for i in range(len(options)):
+            try:
+                await msg.add_reaction(POLL_EMOJIS[i])
+            except discord.HTTPException:
+                pass
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Utility(bot))

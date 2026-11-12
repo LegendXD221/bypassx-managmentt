@@ -229,6 +229,51 @@ class Levels(commands.Cog):
             await get_db().execute("DELETE FROM user_xp WHERE guild_id=$1", interaction.guild.id)
             await interaction.response.send_message(embed=embed_success("Reset", "Cleared XP for **everyone** in this server."))
 
+    # ---------- reputation (folded in v4) ----------
+
+    rep = app_commands.Group(name="rep", description="Reputation commands.", default_permissions=None)
+
+    @rep.command(name="view", description="View a member's reputation.")
+    async def rep_view(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
+        member = member or interaction.user
+        rep_val = await get_db().fetchval("SELECT reputation FROM user_reputation WHERE guild_id=$1 AND user_id=$2", interaction.guild.id, member.id)
+        rep_val = rep_val or 0
+        embed = embed_premium(f"Reputation — {member}", f"★ **{rep_val}** reputation points")
+        await interaction.response.send_message(embed=embed)
+
+    @rep.command(name="leaderboard", description="Show the top reputed members.")
+    async def rep_leaderboard(self, interaction: discord.Interaction):
+        rows = await get_db().fetch("SELECT user_id, reputation FROM user_reputation WHERE guild_id=$1 ORDER BY reputation DESC LIMIT 10", interaction.guild.id)
+        if not rows:
+            await interaction.response.send_message(embed=embed_info("Empty", "No reputation given yet."))
+            return
+        embed = embed_premium("Reputation Leaderboard")
+        medals = ["🥇", "🥈", "🥉"]
+        for i, r in enumerate(rows[:10]):
+            medal = medals[i] if i < 3 else f"`#{i+1}`"
+            m = interaction.guild.get_member(int(r["user_id"]))
+            name = m.mention if m else f"`{r['user_id']}`"
+            embed.add_field(name=f"{medal}  {name}", value=f"★ **{r['reputation']}**", inline=False)
+        await interaction.response.send_message(embed=embed)
+
+    @rep.command(name="give", description="Manually give reputation (admin).")
+    @app_commands.default_permissions(manage_guild=True)
+    async def rep_give(self, interaction: discord.Interaction, member: discord.Member, amount: app_commands.Range[int, -100, 100] = 1):
+        if member.bot:
+            await interaction.response.send_message(embed=embed_error("Can't give rep to a bot."), ephemeral=True)
+            return
+        await get_db().execute(
+            """
+            INSERT INTO user_reputation (guild_id, user_id, reputation)
+            VALUES ($1,$2,$3)
+            ON CONFLICT (guild_id, user_id) DO UPDATE
+            SET reputation = GREATEST(0, user_reputation.reputation + $3)
+            """,
+            interaction.guild.id, member.id, amount,
+        )
+        rep_val = await get_db().fetchval("SELECT reputation FROM user_reputation WHERE guild_id=$1 AND user_id=$2", interaction.guild.id, member.id)
+        await interaction.response.send_message(embed=embed_success("Reputation Updated", f"{member.mention} now has **{rep_val}** rep (Δ {amount:+d})."))
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Levels(bot))

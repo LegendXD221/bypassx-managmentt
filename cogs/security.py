@@ -226,6 +226,36 @@ class Security(commands.Cog):
         embed.add_field(name=f"Other ({len(normal)})", value=", ".join(f"`{p}`" for p in normal) or "None", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    # ---------- anti-nuke whitelist (folded in v4) ----------
+
+    @group.command(name="whitelist", description="Whitelist a user from anti-nuke actions.")
+    @is_admin()
+    async def whitelist_add(self, interaction: discord.Interaction, member: discord.Member):
+        await get_db().execute(
+            "INSERT INTO anti_nuke_whitelist (guild_id, user_id, added_by) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
+            interaction.guild.id, member.id, interaction.user.id,
+        )
+        await interaction.response.send_message(embed=embed_success("Whitelisted", f"{member.mention} is now exempt from anti-nuke."))
+
+    @group.command(name="unwhitelist", description="Remove a user from the anti-nuke whitelist.")
+    @is_admin()
+    async def whitelist_remove(self, interaction: discord.Interaction, member: discord.Member):
+        await get_db().execute("DELETE FROM anti_nuke_whitelist WHERE guild_id=$1 AND user_id=$2", interaction.guild.id, member.id)
+        await interaction.response.send_message(embed=embed_success("Removed", f"{member.mention} is no longer whitelisted."))
+
+    @group.command(name="whitelistlist", description="List all whitelisted users.")
+    @is_admin()
+    async def whitelist_list(self, interaction: discord.Interaction):
+        rows = await get_db().fetch("SELECT user_id FROM anti_nuke_whitelist WHERE guild_id=$1 ORDER BY user_id", interaction.guild.id)
+        if not rows:
+            await interaction.response.send_message(embed=embed_info("Empty", "No whitelisted users."))
+            return
+        embed = embed_premium("Anti-Nuke Whitelist", f"**{len(rows)}** whitelisted users:")
+        for r in rows[:25]:
+            member = interaction.guild.get_member(int(r["user_id"]))
+            embed.add_field(name=f"`{r['user_id']}`", value=member.mention if member else "Not in server", inline=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Security(bot))
