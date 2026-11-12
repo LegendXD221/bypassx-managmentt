@@ -231,6 +231,10 @@ async def main() -> None:
 
     bot = BypassXBot()
 
+    # Start the keep-alive HTTP server (needed for Render free tier 24/7).
+    from keepalive import KeepAlive
+    keepalive = KeepAlive(bot)
+
     # graceful shutdown
     stop_event = asyncio.Event()
 
@@ -246,16 +250,36 @@ async def main() -> None:
             signal.signal(sig, lambda *a: stop_event.set())
 
     bot_task = asyncio.create_task(bot.start(config.bot_token, reconnect=True))
+
+    # Wait until the bot is ready, then start the keep-alive HTTP server.
+    async def _start_keepalive_after_ready():
+        try:
+            await bot.wait_until_ready()
+            await keepalive.start()
+        except Exception as exc:  # noqa: BLE001
+            log.exception("Keep-alive server failed: %s", exc)
+
+    keepalive_task = asyncio.create_task(_start_keepalive_after_ready())
+
     stop_task = asyncio.create_task(stop_event.wait())
     done, pending = await asyncio.wait({bot_task, stop_task}, return_when=asyncio.FIRST_COMPLETED)
     if stop_task in done:
         log.info("Closing bot gracefully...")
+        keepalive_task.cancel()
+        try:
+            await keepalive.stop()
+        except Exception:  # noqa: BLE001
+            pass
         await bot.close()
         await database.close()
     else:
         # bot_task exited first (crashed or logged out)
         log.warning("Bot task ended unexpectedly.")
         stop_task.cancel()
+        try:
+            await keepalive.stop()
+        except Exception:  # noqa: BLE001
+            pass
         await database.close()
 
 

@@ -525,6 +525,17 @@ class Database:
     def __init__(self, dsn: str):
         if dsn.startswith("postgres://"):
             dsn = dsn.replace("postgres://", "postgresql://", 1)
+        # Strip parameters asyncpg doesn't natively understand (Neon's
+        # channel_binding=require is enforced server-side regardless).
+        try:
+            from urllib.parse import urlparse, parse_qsl, urlencode
+            parsed = urlparse(dsn)
+            params = dict(parse_qsl(parsed.query))
+            params.pop("channel_binding", None)
+            cleaned_query = urlencode(params)
+            dsn = parsed._replace(query=cleaned_query).geturl()
+        except Exception:  # noqa: BLE001
+            pass
         self.dsn = dsn
         self.pool: asyncpg.Pool | None = None
 

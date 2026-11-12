@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: bypassx-management
+    runtime: python
+    plan: free
+    repo: https://github.com/LegendXD221/bypassx-managmentt
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: DEFAULT_PREFIX
+        value: bx!
+      - key: BOT_STATUS
+        value: /help
+      - key: DEBUG
+        value: "false"

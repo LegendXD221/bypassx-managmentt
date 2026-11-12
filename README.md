@@ -8,32 +8,29 @@ Inspired by the best of Dyno, Carl-bot, Sapphire, Wick, Sterix, and Hedwig — a
 
 ---
 
-## v2 Highlights
+## v3 Highlights
 
-Beyond the v1 core (moderation, automod, tickets, roles, verification, logging, security, utility, reminders, tags, AFK, admin, help), **v2** adds 17 new modules:
+Beyond the v1 core (moderation, automod, tickets, roles, verification, logging, security, utility, reminders, tags, AFK, admin, help) and the **v2 expansion** (17 new modules: sticky, starboard, giveaways, levels, profiles, captcha, auto-responder, server stats, temp voice, snipe, embed builder, fun, role persistence, birthdays, lockdown, quotes, mass actions, owner commands), **v3** adds:
 
+### Components v2 (dropdowns & buttons)
+- **🎫 Premium ticket panel** with dropdown category selection (`/ticket panel-v3`)
+- **▼ Dropdown role picker** — toggle multiple roles from one menu
+- **⚙ Premium info panels** with dropdown navigation (Overview / Rules / Channels / Roles / FAQ / Support)
+- **Premium button panels** for role assignment
+
+### 12 new AIO cogs
 | Module | Highlights |
 | --- | --- |
-| **📌 Sticky Messages** | Carl-style stickies that re-post after N new messages |
-| **⭐ Starboard** | Star a message to feature it; configurable threshold & channel |
-| **🎉 Giveaways** | Button-entry giveaways with auto-end, re-roll, and participant tracking |
-| **✦ Levels** | XP/leveling system with progress bars, role rewards, leaderboard, configurable per-server |
-| **👤 Profiles** | Per-guild user profiles with bio, title, custom color, badges |
-| **🔐 Captcha** | Wick-style captcha verification gate with difficulty & auto-kick for unverified |
-| **💬 Auto Responder** | Trigger/response pairs (contains / exact / startswith / regex match) |
-| **📊 Server Stats** | Live voice-channel counters: members, humans, bots, channels, roles, boosts, online |
-| **🔊 Temp Voice** | Join a creator channel to spawn your own temporary voice room |
-| **🎯 Snipe** | Retrieve recently deleted or edited messages (last 25 per channel) |
-| **🎨 Embed Builder** | Build & send custom embeds; save & re-use named presets |
-| **🎲 Fun** | 8ball, dice (NdM), coinflip, choose, RPS, would-you-rather, random, meme |
-| **💾 Role Persistence** | Restore member roles automatically when they rejoin |
-| **🎂 Birthdays** | Track member birthdays; auto-announce & assign a birthday role |
-| **🔒 Lockdown All** | Server-wide lock & unlock in one command |
-| **❝ Quotes** | Save memorable quotes, view by ID or random |
-| **⚖ Mass Actions** | Mass role add/remove, mass ban, mass kick, mass nickname |
-| **👑 Owner Commands** | eval, sql, listguilds, leaveguild, botstats, broadcast, maintenance, reloadall |
-
-The v2 schema adds **22 new tables** (starboard, giveaways, XP, profiles, captcha, auto-responses, server stats, temp voice, quotes, role persistence, birthdays, custom commands, saved embeds, lockdown state, anti-nuke whitelist, nickname history, scheduled announcements, and more), with idempotent ALTERs on the existing `guild_config` table.
+| **📋 Mod Extras** | Private mod notes, member history lookup, memberinfo |
+| **🔊 Voice Tools** | move, mass-move, mute, unmute, deafen, undeafen, disconnect |
+| **📅 Scheduled Announcements** | Recurring messages with pause/resume |
+| **📊 Reaction Polls** | Timed polls with auto-end and result bars |
+| **🛡 Anti-Nuke Whitelist** | Exempt trusted staff from anti-nuke actions |
+| **★ Reputation** | "thanks @user" detection, leaderboard, manual give |
+| **🎨 Color Roles** | Members set a custom hex color for their own role |
+| **🔤 Text Tools** | mock, reverse, encode/decode (b64/binary/hex), password, sha256, vaporwave |
+| **✦ Utility Extra** | timezone converter, hex/rgb, invite info, role list, channel info, emoji info |
+| **💾 Role Persistence** | Restore member roles when they rejoin |
 
 ---
 
@@ -46,33 +43,12 @@ The v2 schema adds **22 new tables** (starboard, giveaways, XP, profiles, captch
 
 ---
 
-## v1 Core Features
-
-| Module | Highlights |
-| --- | --- |
-| **🛡 Moderation** | Ban, unban, kick, softban, timeout, persistent role-based mute, warnings (with history), purge, slowmode, channel lockdown/unlock, nickname management |
-| **🤖 AutoMod** | Sliding-window spam detection, word filter, link & Discord-invite filter, mention-spam protection, anti-raid with new-account detection |
-| **👋 Welcome / Leave** | Customisable messages with `{user}`, `{server}`, `{member_count}` placeholders, auto-role on join |
-| **🎫 Tickets** | Button-driven ticket panels, claim & close controls, transcript saved and DM'd to the opener |
-| **🎭 Roles** | Reaction-role panels, multi-role button panels, self-assignable toggle |
-| **✅ Verification** | One-click verification gate with persistent button |
-| **📝 Logging** | Message edits/deletes, member join/leave, role & channel create/delete, voice activity, server updates |
-| **🔐 Security** | Anti-nuke detection (auto-quarantine after 5 destructive actions/min), dangerous-permission alerts, audit log reader |
-| **⏰ Reminders** | Personal reminders with natural durations and due-fire background loop |
-| **🏷 Tags** | Per-server custom commands with use counter |
-| **💤 AFK** | Mark yourself AFK; bot replies to mentions and clears on return |
-| **🛠 Utility** | Ping, uptime, server/user/role info, avatar, member count, server icon, first message, polls, bot info |
-| **⚙ Config** | Live per-guild configuration via `/config set/view/reset` |
-
-Plus: rotating presence, persistent views (buttons keep working after restart), graceful shutdown, comprehensive error handling.
-
----
-
 ## Tech Stack
 
-- **Python 3.11+** (3.12 tested)
+- **Python 3.12**
 - **discord.py 2.3+** (full application commands support)
 - **asyncpg** for async PostgreSQL access (Neon free tier)
+- **aiohttp** for the Render keep-alive HTTP server
 - **python-dotenv**, **psutil**, **orjson**
 
 ---
@@ -83,10 +59,11 @@ Plus: rotating presence, persistent views (buttons keep working after restart), 
 - Python 3.11+
 - A Discord application with a bot token — <https://discord.com/developers/applications>
 - A Neon Postgres free-tier database — <https://neon.tech>
+- A Render account (free tier supported) — <https://render.com>
 
 ### 2. Install
 ```bash
-git clone https://github.com/LegendXD221/bypassx-managmentt.git
+git clone <your-repo-url>
 cd bypassx-managmentt
 pip install -r requirements.txt
 ```
@@ -99,21 +76,44 @@ Fill in `BOT_TOKEN`, `DATABASE_URL` (Neon connection string), and `OWNER_ID` (yo
 
 ### 4. Discord Developer Portal
 Enable all three **Privileged Gateway Intents** in your application's Bot page:
-- ✅ Presence Intent
-- ✅ Server Members Intent
-- ✅ Message Content Intent
+- Presence Intent
+- Server Members Intent
+- Message Content Intent
 
-### 5. Invite
-```
-https://discord.com/api/oauth2/authorize?client_id=YOUR_APP_ID&permissions=8&scope=bot%20applications.commands
-```
-
-### 6. Run
+### 5. Run locally
 ```bash
 python main.py
 ```
 
-The bot automatically connects to Neon, creates all 36 tables, loads 31 cogs, syncs slash commands globally, and starts background loops for reminders, mute expiry, giveaways, captcha kicks, server stats, birthdays, and presence rotation.
+---
+
+## Deploy on Render (free tier, 24/7)
+
+The bot ships with a built-in keep-alive HTTP server (`keepalive.py`) that:
+1. Binds to `$PORT` (provided by Render)
+2. Exposes `/health`, `/ping`, and `/` endpoints for Render's health checks
+3. Self-pings every 5 minutes to prevent Render's 15-minute spin-down
+
+### Steps
+1. Push the code to your GitHub repo.
+2. In Render, create a new **Web Service** from your repo.
+3. Configure:
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `python main.py`
+   - **Plan:** Free
+   - **Health Check Path:** `/health`
+4. Add the following **environment variables** (in Render's dashboard or via API):
+   - `BOT_TOKEN` — your Discord bot token
+   - `DATABASE_URL` — Neon Postgres connection string
+   - `OWNER_ID` — your Discord user ID
+   - `DEFAULT_PREFIX` — `bx!`
+   - `BOT_STATUS` — `/help`
+   - `DEBUG` — `false`
+5. Deploy. Render will assign a public URL like `https://bypassx-management.onrender.com`.
+6. *(Optional but recommended for true 24/7)* Set up a free external uptime pinger (e.g. UptimeRobot, cron-job.org) to hit `https://<your-app>.onrender.com/health` every 5 minutes. This prevents Render's free-tier sleep even further.
+
+The `render.yaml` Blueprint file in this repo can also be used for one-click deploys.
 
 ---
 
@@ -121,10 +121,13 @@ The bot automatically connects to Neon, creates all 36 tables, loads 31 cogs, sy
 
 ```
 bypassx-managmentt/
-├── main.py                # entry point
+├── main.py                # entry point — loads cogs, opens DB, runs bot + keep-alive
 ├── config.py              # env loader
-├── database.py            # asyncpg pool + 36-table schema
+├── database.py            # asyncpg pool + schema (45 tables, v3 expansion)
 ├── utils.py               # premium embed system + helpers
+├── keepalive.py           # Render keep-alive HTTP server
+├── render.yaml            # Render Blueprint
+├── .python-version        # pins Python 3.12.6
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
@@ -132,25 +135,14 @@ bypassx-managmentt/
 ├── WorkLog.md
 ├── LICENSE
 ├── start.sh / start.bat
-└── cogs/
-    ├── admin.py            ├── moderation.py       ├── automod.py
-    ├── welcome.py          ├── tickets.py          ├── roles.py
-    ├── verification.py     ├── utility.py          ├── logging_cog.py
-    ├── reminders.py        ├── tags.py             ├── afk.py
-    ├── security.py         ├── sticky.py           ├── starboard.py
-    ├── giveaways.py        ├── levels.py           ├── profiles.py
-    ├── captcha.py           ├── autoresponder.py    ├── serverstats.py
-    ├── tempchannels.py      ├── snipe.py            ├── embed_builder.py
-    ├── fun.py               ├── role_persistence.py ├── owner.py
-    ├── mass_actions.py      ├── birthdays.py        ├── lockdown_all.py
-    ├── quotes.py            └── help_cog.py
+└── cogs/                  # 43 cogs (14 v1 + 17 v2 + 11 v3 + help_cog)
 ```
 
 ---
 
 ## Command Modules
 
-Run `/help` in any server for an interactive dropdown menu. The 31 cogs expose **100+ slash commands**.
+Run `/help` in any server for an interactive dropdown menu. The **43 cogs** expose **130+ slash commands** across 42 modules.
 
 ---
 
@@ -168,10 +160,3 @@ Read `WorkLog.md` before starting any work, and update it after every push.
 ## License
 
 MIT — see [LICENSE](./LICENSE).
-
----
-
-## Links
-- **Repository:** <https://github.com/LegendXD221/bypassx-managmentt>
-- **discord.py docs:** <https://discordpy.readthedocs.io>
-- **Neon Postgres:** <https://neon.tech>
